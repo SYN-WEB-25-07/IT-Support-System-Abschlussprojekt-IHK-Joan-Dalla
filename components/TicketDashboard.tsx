@@ -20,7 +20,9 @@ interface Ticket {
 interface TicketDashboardProps {
   initialTickets: Ticket[];
   currentUser: {
+    id: string;
     name: string;
+    role: "ADMIN" | "USER"; // Rollen im Typ definiert
   };
 }
 
@@ -28,7 +30,6 @@ export default function TicketDashboard({ initialTickets, currentUser }: TicketD
   const [searchTerm, setSearchTerm] = useState("");
   const [activeFilter, setActiveFilter] = useState<"ALL" | "OPEN" | "IN_PROGRESS" | "CLOSED">("ALL");
 
-  // Dynamische Filterung
   const filteredTickets = initialTickets.filter((ticket) => {
     const matchesSearch =
       ticket.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -39,11 +40,12 @@ export default function TicketDashboard({ initialTickets, currentUser }: TicketD
     return matchesSearch && matchesTab;
   });
 
-  // Statistiken
   const total = initialTickets.length;
   const open = initialTickets.filter((t) => t.status === "OPEN").length;
   const progress = initialTickets.filter((t) => t.status === "IN_PROGRESS").length;
   const closed = initialTickets.filter((t) => t.status === "CLOSED").length;
+
+  const isAdmin = currentUser.role === "ADMIN";
 
   return (
     <main className="min-h-screen bg-slate-50 text-slate-800 p-4 md:p-8">
@@ -54,7 +56,10 @@ export default function TicketDashboard({ initialTickets, currentUser }: TicketD
           <div>
             <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">IT-Support Cockpit</h1>
             <p className="text-sm text-slate-500">
-              Angemeldet als: <span className="font-bold text-blue-600">{currentUser.name}</span>
+              Angemeldet als: <span className="font-bold text-blue-600">{currentUser.name}</span> 
+              <span className="text-xs ml-2 bg-slate-200 px-2 py-0.5 rounded text-slate-600 font-semibold">
+                {isAdmin ? "IT-Administrator" : "Mitarbeiter"}
+              </span>
             </p>
           </div>
           
@@ -73,7 +78,7 @@ export default function TicketDashboard({ initialTickets, currentUser }: TicketD
           </div>
         </header>
 
-        {/* Dashboard Kennzahlen (Geändert auf md:grid-cols-4 für perfekte Laptop-Ansicht) */}
+        {/* Dashboard Kennzahlen */}
         <section className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           <button 
             onClick={() => setActiveFilter("ALL")}
@@ -101,7 +106,7 @@ export default function TicketDashboard({ initialTickets, currentUser }: TicketD
 
           <button 
             onClick={() => setActiveFilter("CLOSED")}
-            className={`p-4 rounded-xl border border-l-4 border-l-green-500 transition-all text-left cursor-pointer ${activeFilter === "CLOSED" ? "bg-green-50/50 border-green-300 ring-2 ring-green-100 shadow-sm" : "bg-white border-slate-200 shadow-sm hover:translate-y-[-2px]"}`}
+            className={`p-4 rounded-xl border border-l-4 border-l-green-500 transition-all text-left cursor-pointer ${activeFilter === "CLOSED" ? "bg-green-50/50 border-green-300 ring-2 font-semibold shadow-sm" : "bg-white border-slate-200 shadow-sm hover:translate-y-[-2px]"}`}
           >
             <span className="text-xs font-semibold text-green-600 uppercase">Gelöst</span>
             <p className="text-2xl font-bold text-slate-800">{closed}</p>
@@ -115,7 +120,7 @@ export default function TicketDashboard({ initialTickets, currentUser }: TicketD
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="🔍 Vorfälle durchsuchen (z. B. Drucker, AD, Sarah)..."
+              placeholder="🔍 Vorfälle durchsuchen (z. B. Drucker, AD, Max)..."
               className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm text-black focus:outline-none focus:ring-2 focus:ring-blue-500 bg-slate-50"
             />
           </div>
@@ -148,7 +153,7 @@ export default function TicketDashboard({ initialTickets, currentUser }: TicketD
           </div>
         </section>
 
-        {/* Responsive Zwei-Spalten-Layout (Geändert auf md:grid-cols-3 für perfekte Laptop-Ansicht) */}
+        {/* Responsive Zwei-Spalten-Layout */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-start">
           
           {/* Spalte 1: Formular */}
@@ -207,7 +212,7 @@ export default function TicketDashboard({ initialTickets, currentUser }: TicketD
             </form>
           </section>
 
-          {/* Spalte 2: Ticketliste (Geändert auf md:col-span-2) */}
+          {/* Spalte 2: Ticketliste */}
           <section className="md:col-span-2">
             <h2 className="text-lg font-bold mb-4 text-slate-700 border-b pb-2">
               Gemeldete Vorfälle ({filteredTickets.length})
@@ -245,7 +250,9 @@ export default function TicketDashboard({ initialTickets, currentUser }: TicketD
                       
                       <div className="flex items-center gap-2">
                         <span className="text-xs text-slate-400 font-bold uppercase">Status:</span>
+                        {/* UX-HIGHLIGHT: Das Dropdown ist für normale USER deaktiviert (disabled={!isAdmin}), nur ADMINS dürfen den Status ändern! */}
                         <select
+                          disabled={!isAdmin}
                           defaultValue={ticket.status}
                           onChange={async (e) => {
                             const newStatus = e.target.value as any;
@@ -254,7 +261,7 @@ export default function TicketDashboard({ initialTickets, currentUser }: TicketD
                             formData.append("status", newStatus);
                             await updateTicketStatus(formData);
                           }}
-                          className="text-xs border border-slate-300 rounded-lg p-1.5 text-black bg-slate-50 font-semibold cursor-pointer focus:outline-none focus:ring-1 focus:ring-blue-500"
+                          className={`text-xs border border-slate-300 rounded-lg p-1.5 text-black bg-slate-50 font-semibold focus:outline-none focus:ring-1 focus:ring-blue-500 ${isAdmin ? "cursor-pointer" : "cursor-not-allowed opacity-75"}`}
                         >
                           <option value="OPEN">Offen</option>
                           <option value="IN_PROGRESS">In Bearbeitung</option>
@@ -262,17 +269,20 @@ export default function TicketDashboard({ initialTickets, currentUser }: TicketD
                         </select>
                       </div>
 
-                      <button 
-                        onClick={async () => {
-                          if (confirm("Möchten Sie dieses Ticket wirklich dauerhaft löschen?")) {
-                            await deleteTicket(ticket.id);
-                          }
-                        }}
-                        type="button"
-                        className="text-xs text-red-500 hover:text-red-700 font-bold transition-colors cursor-pointer"
-                      >
-                        Löschen
-                      </button>
+                      {/* Nur Admins dürfen Tickets löschen */}
+                      {isAdmin && (
+                        <button 
+                          onClick={async () => {
+                            if (confirm("Möchten Sie dieses Ticket wirklich dauerhaft löschen?")) {
+                              await deleteTicket(ticket.id);
+                            }
+                          }}
+                          type="button"
+                          className="text-xs text-red-500 hover:text-red-700 font-bold transition-colors cursor-pointer"
+                        >
+                          Löschen
+                        </button>
+                      )}
                     </div>
                   </div>
                 ))}

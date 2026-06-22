@@ -6,7 +6,6 @@ import TicketDashboard from "../components/TicketDashboard";
 export const revalidate = 0;
 
 export default async function Home() {
-  // 1. Next.js 15: Cookies asynchron prüfen
   const cookieStore = await cookies();
   const sessionCookie = cookieStore.get("session");
 
@@ -14,7 +13,6 @@ export default async function Home() {
     redirect("/login");
   }
 
-  // 2. Angemeldeten Benutzer laden
   const currentUser = await db.user.findUnique({
     where: { id: sessionCookie.value },
   });
@@ -23,17 +21,27 @@ export default async function Home() {
     redirect("/login");
   }
 
-  // 3. Alle Tickets inkl. Ersteller laden
-  const tickets = await db.ticket.findMany({
-    include: { user: true },
-    orderBy: { createdAt: "desc" },
-  });
+  let tickets;
 
-  // 4. Daten an die interaktive Client-Komponente übergeben
+  // Rollenbasierte Datenbankabfrage (RBAC)
+  if (currentUser.role === "ADMIN") {
+    // Joan Admin sieht ALLE Tickets im System
+    tickets = await db.ticket.findMany({
+      include: { user: true },
+      orderBy: { createdAt: "desc" },
+    });
+  } else {
+    // Max Mitarbeiter sieht NUR seine eigenen erstellten Tickets
+    tickets = await db.ticket.findMany({
+      where: { userId: currentUser.id },
+      include: { user: true },
+    });
+  }
+
   return (
     <TicketDashboard 
       initialTickets={tickets as any} 
-      currentUser={currentUser} 
+      currentUser={currentUser as any} 
     />
   );
 }

@@ -8,11 +8,12 @@ generator client {
 }
 
 model User {
-  id      String   @id @default(uuid())
-  email   String   @unique
-  name    String
+  id       String   @id @default(uuid())
+  email    String   @unique
+  name     String
   password String
-  tickets Ticket[]
+  role     Role     @default(USER) // Neu: Standardmäßig ist jeder neue User ein normaler USER
+  tickets  Ticket[]
 }
 
 model Ticket {
@@ -24,6 +25,11 @@ model Ticket {
   createdAt   DateTime @default(now())
   userId      String
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+enum Role {
+  USER
+  ADMIN
 }
 
 enum Status {

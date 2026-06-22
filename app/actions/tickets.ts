@@ -1,8 +1,10 @@
+"use server"; // MUSS in Zeile 1 stehen!
+
 import { db } from "../../lib/db";
 import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 
-// Hilfsfunktion: Holt die ID des aktuell angemeldeten Users aus dem Session-Cookie
+// Hilfsfunktion: Holt die ID des aktuell angemeldeten Users aus dem Session-Cookie auf Server-Ebene
 async function getLoggedInUserId() {
   const cookieStore = await cookies();
   const sessionCookie = cookieStore.get("session");
@@ -12,7 +14,7 @@ async function getLoggedInUserId() {
   return sessionCookie.value;
 }
 
-// 1. Ticket erstellen (Zuweisung zum echten, angemeldeten User)
+// 1. Ticket erstellen (Zuweisung zum echten, angemeldeten User via Cookie)
 export async function createTicket(formData: FormData) {
   const title = formData.get("title") as string;
   const description = formData.get("description") as string;
@@ -20,7 +22,7 @@ export async function createTicket(formData: FormData) {
 
   if (!title || !description) return;
 
-  const userId = await getLoggedInUserId(); // Holt die echte User-ID aus dem Cookie
+  const userId = await getLoggedInUserId(); // Holt die echte User-ID sicher auf dem Server aus dem Cookie
 
   await db.ticket.create({
     data: {

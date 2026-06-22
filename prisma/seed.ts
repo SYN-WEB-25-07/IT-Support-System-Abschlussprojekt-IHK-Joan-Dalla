@@ -10,62 +10,77 @@ async function main() {
   const adminPassword = await bcrypt.hash('admin123', 10)
   const userPassword = await bcrypt.hash('user123', 10)
 
-  // 1. Admin erstellen
+  // 1. Joan Admin erstellen (Rolle: ADMIN)
   const admin = await prisma.user.create({
     data: {
       email: 'admin@it-support.de',
-      name: 'Sarah Admin',
+      name: 'Joan Admin',
       password: adminPassword,
+      role: 'ADMIN',
     }
   })
 
-  // 2. Standard-Mitarbeiter erstellen
-  const standardUser = await prisma.user.create({
-    data: {
-      email: 'user@it-support.de',
-      name: 'Max Mitarbeiter',
-      password: userPassword,
-    }
-  })
+  // 2. 10 echte Mitarbeiter definieren (Rolle: USER)
+  const employeesData = [
+    { email: 'max@firma.de', name: 'Max Mitarbeiter' },
+    { email: 'lisa@firma.de', name: 'Lisa Buchhaltung' },
+    { email: 'thomas@firma.de', name: 'Thomas Vertrieb' },
+    { email: 'julia@firma.de', name: 'Julia Marketing' },
+    { email: 'andreas@firma.de', name: 'Andreas Personal' },
+    { email: 'laura@firma.de', name: 'Laura Einkauf' },
+    { email: 'michael@firma.de', name: 'Michael Logistik' },
+    { email: 'sarah@firma.de', name: 'Sarah Design' },
+    { email: 'stefan@firma.de', name: 'Stefan Empfang' },
+    { email: 'anna@firma.de', name: 'Anna Recht' }
+  ]
 
-  // 3. Vorlagen für IT-Probleme
-  const problemTemplates = [
-    { title: 'Monitor flackert', desc: 'Der linke Bildschirm flackert ununterbrochen, wenn er über HDMI angeschlossen ist.', priority: 'MEDIUM' },
-    { title: 'VPN-Verbindung bricht ab', desc: 'Mein VPN bricht im Homeoffice alle 10 Minuten ab. Teams-Anrufe fliegen ständig raus.', priority: 'HIGH' },
-    { title: 'Drucker zeigt Papierstau', desc: 'Der Abteilungsdrucker im 2. OG meldet Papierstau im Fach 3, das Fach ist aber komplett leer.', priority: 'LOW' },
-    { title: 'Active Directory gesperrt', desc: 'Ich habe mein Kennwort dreimal falsch eingegeben. Mein AD-Account ist nun gesperrt. Bitte entsperren.', priority: 'HIGH' },
-    { title: 'Outlook synchronisiert nicht', desc: 'Meine E-Mails in Outlook hängen seit gestern Abend fest. Keine neuen Mails kommen an.', priority: 'MEDIUM' },
-    { title: 'Neues MacBook einrichten', desc: 'Die Hardware für das neue Teammitglied im Design-Bereich muss noch mit Standardsoftware bespielt werden.', priority: 'LOW' },
-    { title: 'Tastatur defekt', desc: 'Die Leertaste meiner kabellosen Tastatur hakt. Bitte um eine neue Ersatztastatur.', priority: 'LOW' },
-    { title: 'WLAN-Zugriff fehlerhaft', desc: 'Mein Laptop verbindet sich nicht mehr mit dem Firmen-WLAN "Company-Internal".', priority: 'MEDIUM' }
-  ];
+  const employees = []
 
-  const statuses = ['OPEN', 'IN_PROGRESS', 'CLOSED'];
-  const names = ['Michael Müller', 'Laura Becker', 'Thomas Schmidt', 'Julia Fischer', 'Andreas Wagner'];
-
-  const ticketsData = [];
-
-  // Generiere 50 Tickets abwechselnd für Admin und Standard-User
-  for (let i = 1; i <= 50; i++) {
-    const template = problemTemplates[i % problemTemplates.length];
-    const status = statuses[i % statuses.length];
-    const assignedUserId = i % 2 === 0 ? admin.id : standardUser.id; // Abwechselnd zuweisen
-
-    ticketsData.push({
-      title: `${template.title} (#${1000 + i})`,
-      description: `${template.desc} Gemeldet für: ${names[i % names.length]}.`,
-      priority: template.priority as any,
-      status: status as any,
-      userId: assignedUserId,
-      createdAt: new Date(Date.now() - i * 60 * 60 * 1000),
-    });
+  // 10 Mitarbeiter in der DB anlegen
+  for (const emp of employeesData) {
+    const createdEmp = await prisma.user.create({
+      data: {
+        email: emp.email,
+        name: emp.name,
+        password: userPassword, // Alle Mitarbeiter haben dasselbe Passwort zum superleichten Testen!
+        role: 'USER'
+      }
+    })
+    employees.push(createdEmp)
   }
 
-  await prisma.ticket.createMany({
-    data: ticketsData
-  });
+  // 3. Vorlagen für 5 unterschiedliche Tickets (die JEDER Mitarbeiter zugeordnet bekommt)
+  const problemTemplates = [
+    { title: 'Outlook Synchronisationsfehler', desc: 'Meine E-Mails in Outlook hängen fest. Es werden keine neuen Nachrichten geladen, und gesendete Mails verbleiben im Postausgang.', priority: 'MEDIUM', status: 'OPEN' },
+    { title: 'Tastatur defekt (Leertaste hakt)', desc: 'Die Leertaste meiner kabellosen Tastatur reagiert nur noch bei sehr festem Druck. Ein flüssiges Arbeiten ist unmöglich.', priority: 'LOW', status: 'IN_PROGRESS' },
+    { title: 'VPN-Verbindung bricht ab', desc: 'Die VPN-Verbindung bricht unregelmäßig alle 10 bis 15 Minuten ab. Teams-Anrufe und Remote-Sitzungen werden ständig unterbrochen.', priority: 'HIGH', status: 'OPEN' },
+    { title: 'Active Directory Account gesperrt', desc: 'Ich habe mein Windows-Kennwort am Montagmorgen dreimal falsch eingegeben. Mein Account ist gesperrt. Bitte entsperren.', priority: 'HIGH', status: 'CLOSED' },
+    { title: 'Mausrad reagiert nicht mehr', desc: 'Das Scrollrad meiner Standard-Firma-Maus hat keine Funktion mehr. Bitte um eine neue Maus.', priority: 'LOW', status: 'CLOSED' }
+  ];
 
-  console.log('50 Tickets wurden erfolgreich abwechselnd für Admin und Mitarbeiter generiert!');
+  const ticketsToCreate = []
+
+  // Jedem der 10 Mitarbeiter genau seine 5 Tickets zuweisen
+  for (const employee of employees) {
+    for (let j = 0; j < problemTemplates.length; j++) {
+      const template = problemTemplates[j];
+      ticketsToCreate.push({
+        title: `${template.title} (${employee.name.split(' ')[0]})`, // Name des Mitarbeiters im Betreff zur Übersicht
+        description: `${template.desc} Betrifft den Arbeitsplatz von ${employee.name}.`,
+        priority: template.priority as any,
+        status: template.status as any,
+        userId: employee.id,
+        createdAt: new Date(Date.now() - j * 60 * 60 * 1000) // Zeitlich leicht gestaffelt
+      })
+    }
+  }
+
+  // 50 Tickets auf einen Schlag in die DB schreiben
+  await prisma.ticket.createMany({
+    data: ticketsToCreate
+  })
+
+  console.log('Erfolgreich! 10 Mitarbeiter wurden mit jeweils genau 5 Tickets angelegt. Gesamt: 50 Tickets.');
 }
 
 main()
