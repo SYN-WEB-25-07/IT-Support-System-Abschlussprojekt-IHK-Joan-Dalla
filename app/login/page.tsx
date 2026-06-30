@@ -1,4 +1,4 @@
-"use client"; // Offiziell eine interaktive Client-Komponente
+"use client"; 
 
 import { useState } from "react";
 import { loginUser, registerUser } from "../actions/auth";
@@ -27,7 +27,6 @@ export default function LoginPage() {
           <p className="text-sm text-slate-500 mt-1">Anmeldung für Mitarbeiter und Admins</p>
         </div>
 
-        {/* NEU: Schnellanmelde-Kacheln für die Live-Demo */}
         <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6">
           <span className="text-[10px] font-bold text-blue-600 uppercase tracking-wider block mb-2 text-center">
             Präsentations-Modus (Schnelle Anmeldung)
